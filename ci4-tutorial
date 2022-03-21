@@ -1,0 +1,500 @@
+####
+It is assumed that codeigniter4 is installed successfully using composer. 
+####
+[1] TO create ci project----
+
+composer create-project codeigniter4/appstarter ci-project
+
+[2] to check if project setup is successful, use ----
+
+php spark serve
+http://localhost:8080
+
+[3] Now, create a file called `Hello.php` in  "app/Controllers/" folder :
+app/Controllers/Hello.php
+
+<?php
+namespace App\Controllers;
+use CodeIgniter\Controller;
+
+class Hello extends Controller
+{
+	public function index()
+	{
+		$data['title'] = "First line in codeignter 4";
+		echo view('hello_view', $data);
+	}
+}
+
+?>
+
+[4] Create a view `hello_view.php` in "app/Views" folder.
+app/Views/hello_view.php
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title><?= $title; ?></title>
+</head>
+<body>
+    <h2><?= $title; ?></h2>
+</body>
+</html>
+
+
+[5] Now run the project using:
+php spark serve
+http://localhost:8080/hello
+
+[6] Create a connection to the database by creating a database in MySQL.
+
+CREATE DATABASE pos_db;
+USE pos_db;
+
+CREATE TABLE product(
+product_id INT PRIMARY KEY AUTO_INCREMENT,
+product_name VARCHAR(100),
+product_price INT); 
+
+
+[7] To make connection to databse on CI4, there are 2 methods:
+[7(1)] using file : "app/Config/Database.php", and set following fields:
+'username'=>'root',
+'password'=>'',
+'database'=>'pos_db',
+
+[7(2)] using ".env" file contained in the project root.Change following:
+database.default.database=pos_db
+database.default.username=root
+database.default.password=
+database.default.DBDriver=MySQLi
+
+[8] create a model: "Product_model.php" in "app/Models" folder.
+app/Models/Product_model.php
+
+<?php
+namespace App\Models;
+use CodeIgniter\Model;
+
+class Product_model extends Model
+{
+	protected $table = 'product';
+	
+	public function getProduct($id = false)
+	{
+		if($id === false)
+		{
+			return $this->findAll();
+		}else{
+			return $this->getWhere(['product_id' => $id]);
+	}
+	}
+}
+?>
+
+[9] To create a controller file named "Product.php" in "app/Controllers" folder.
+app/Controllers/Product.php
+
+<?php namespace App\Controllers;
+ 
+use CodeIgniter\Controller;
+use App\Models\Product_model;
+ 
+class Product extends Controller
+{
+    public function index()
+    {
+        $model = new Product_model();
+        $data['product'] = $model->getProduct();
+        echo view('product_view',$data);
+    }
+}
+?>
+
+[10] Create a view named "product_view.php" in "app/Views/" folder.
+app/Views/product_view.php
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Product List</title>
+</head>
+<body> 
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach($product as $row):?>
+            <tr>
+                <td><?= $row['product_name'];?></td>
+                <td><?= $row['product_price'];?></td>
+            </tr>
+        <?php endforeach;?>
+        </tbody>
+    </table>
+</body>
+</html>
+
+[11] create view name "add_product_view.php" in "app/Views" folder.
+app/Views/add_product_view.php
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Add New Product</title>
+</head>
+<body>
+    <form action="/product/save" method="post">
+        <input type="text" name="product_name">
+        <input type="text" name="product_price">
+        <button type="submit">Save</button>
+    </form>
+</body>
+</html>
+
+[12] Update the "Product.php" in the "app/Controllers" folder.
+app/Controllers/Product.php
+
+<?php namespace App\Controllers;
+ 
+use CodeIgniter\Controller;
+use App\Models\Product_model;
+ 
+class Product extends Controller
+{
+    public function index()
+    {
+        $model = new Product_model();
+        $data['product'] = $model->getProduct();
+        echo view('product_view',$data);
+    }
+ 
+    public function add_new()
+    {
+        echo view('add_product_view');
+    }
+ 
+    public function save()
+    {
+        $model = new Product_model();
+        $data = array(
+            'product_name'  => $this->request->getPost('product_name'),
+            'product_price' => $this->request->getPost('product_price'),
+        );
+        $model->saveProduct($data);
+        return redirect()->to('/product');
+    }
+}
+
+
+[13] app/Models/Product_model.php
+
+<?php namespace App\Models;
+use CodeIgniter\Model;
+ 
+class Product_model extends Model
+{
+    protected $table = 'product';
+     
+    public function getProduct($id = false)
+    {
+        if($id === false){
+            return $this->findAll();
+        }else{
+            return $this->getWhere(['product_id' => $id]);
+        }   
+    }
+ 
+    public function saveProduct($data)
+    {
+        $query = $this->db->table($this->table)->insert($data);
+        return $query;
+    }
+}
+
+
+[14] app/Views/product_view.php
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Product List</title>
+</head>
+<body>
+    <a href="/product/add_new">Add New</a>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach($product as $row):?>
+            <tr>
+                <td><?= $row['product_name'];?></td>
+                <td><?= $row['product_price'];?></td>
+                <td><a href="/product/edit/<?= $row['product_id'];?>">Edit</a></td>
+            </tr>
+        <?php endforeach;?>
+        </tbody>
+    </table>
+</body>
+</html>
+
+
+[15] app/Controllers/Product.php
+<?php namespace App\Controllers;
+ 
+use CodeIgniter\Controller;
+use App\Models\Product_model;
+ 
+class Product extends Controller
+{
+    public function index()
+    {
+        $model = new Product_model();
+        $data['product'] = $model->getProduct();
+        echo view('product_view',$data);
+    }
+ 
+    public function add_new()
+    {
+        echo view('add_product_view');
+    }
+ 
+    public function save()
+    {
+        $model = new Product_model();
+        $data = array(
+            'product_name'  => $this->request->getPost('product_name'),
+            'product_price' => $this->request->getPost('product_price'),
+        );
+        $model->saveProduct($data);
+        return redirect()->to('/product');
+    }
+ 
+    public function edit($id)
+    {
+        $model = new Product_model();
+        $data['product'] = $model->getProduct($id)->getRow();
+        echo view('edit_product_view', $data);
+    }
+ 
+    public function update()
+    {
+        $model = new Product_model();
+        $id = $this->request->getPost('product_id');
+        $data = array(
+            'product_name'  => $this->request->getPost('product_name'),
+            'product_price' => $this->request->getPost('product_price'),
+        );
+        $model->updateProduct($data, $id);
+        return redirect()->to('/product');
+    }
+}
+
+
+[16] create one new view name "edit_product_view.php" in "app/Views/" folder.
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Edit Product</title>
+</head>
+<body>
+    <form action="/product/update" method="post">
+        <input type="text" name="product_name" value="<?= $product->product_name;?>">
+        <input type="text" name="product_price" value="<?= $product->product_price;?>">
+        <input type="hidden" name="product_id" value="<?= $product->product_id;?>">
+        <button type="submit">Update</button>
+    </form>
+</body>
+</html>
+
+
+[17] To update the database : app/Models/Product_model.php
+<?php namespace App\Models;
+use CodeIgniter\Model;
+ 
+class Product_model extends Model
+{
+    protected $table = 'product';
+     
+    public function getProduct($id = false)
+    {
+        if($id === false){
+            return $this->findAll();
+        }else{
+            return $this->getWhere(['product_id' => $id]);
+        }   
+    }
+ 
+    public function saveProduct($data)
+    {
+        $query = $this->db->table($this->table)->insert($data);
+        return $query;
+    }
+ 
+    public function updateProduct($data, $id)
+    {
+        $query = $this->db->table($this->table)->update($data, array('product_id' => $id));
+        return $query;
+    }
+}
+
+
+[18] To delete from database: app/Views/product_view.php
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Product List</title>
+</head>
+<body>
+    <a href="/product/add_new">Add New</a>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach($product as $row):?>
+            <tr>
+                <td><?= $row['product_name'];?></td>
+                <td><?= $row['product_price'];?></td>
+                <td>
+                    <a href="/product/edit/<?= $row['product_id'];?>">Edit</a>
+                    <a href="/product/delete/<?= $row['product_id'];?>">Delete</a>
+                </td>
+            </tr>
+        <?php endforeach;?>
+        </tbody>
+    </table>
+</body>
+</html>
+
+
+[19] app/Controllers/Product.php
+<?php namespace App\Controllers;
+ 
+use CodeIgniter\Controller;
+use App\Models\Product_model;
+ 
+class Product extends Controller
+{
+    public function index()
+    {
+        $model = new Product_model();
+        $data['product'] = $model->getProduct();
+        echo view('product_view',$data);
+    }
+ 
+    public function add_new()
+    {
+        echo view('add_product_view');
+    }
+ 
+    public function save()
+    {
+        $model = new Product_model();
+        $data = array(
+            'product_name'  => $this->request->getPost('product_name'),
+            'product_price' => $this->request->getPost('product_price'),
+        );
+        $model->saveProduct($data);
+        return redirect()->to('/product');
+    }
+ 
+    public function edit($id)
+    {
+        $model = new Product_model();
+        $data['product'] = $model->getProduct($id)->getRow();
+        echo view('edit_product_view', $data);
+    }
+ 
+    public function update()
+    {
+        $model = new Product_model();
+        $id = $this->request->getPost('product_id');
+        $data = array(
+            'product_name'  => $this->request->getPost('product_name'),
+            'product_price' => $this->request->getPost('product_price'),
+        );
+        $model->updateProduct($data, $id);
+        return redirect()->to('/product');
+    }
+ 
+    public function delete($id)
+    {
+        $model = new Product_model();
+        $model->deleteProduct($id);
+        return redirect()->to('/product');
+    }
+}
+
+
+[20] app/Models/Product_model.php
+
+<?php namespace App\Models;
+use CodeIgniter\Model;
+ 
+class Product_model extends Model
+{
+    protected $table = 'product';
+     
+    public function getProduct($id = false)
+    {
+        if($id === false){
+            return $this->findAll();
+        }else{
+            return $this->getWhere(['product_id' => $id]);
+        }   
+    }
+ 
+    public function saveProduct($data)
+    {
+        $query = $this->db->table($this->table)->insert($data);
+        return $query;
+    }
+ 
+    public function updateProduct($data, $id)
+    {
+        $query = $this->db->table($this->table)->update($data, array('product_id' => $id));
+        return $query;
+    }
+ 
+    public function deleteProduct($id)
+    {
+        $query = $this->db->table($this->table)->delete(array('product_id' => $id));
+        return $query;
+    } 
+}
+
+
+[21] php spark serve
